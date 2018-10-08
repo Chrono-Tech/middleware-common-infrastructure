@@ -7,17 +7,16 @@ const EventEmitter = require('events'),
   amqp = require('amqplib');
 
 /**
- * Class for subscribe on amqp events 
+ * Class for subscribe on amqp events
  * from other middlewares
  * listen only selected messages
- * 
+ *
  * @class AmqpServer
  * @extends {EventEmitter}
  */
-class AmqpService extends EventEmitter
-{
+class AmqpService extends EventEmitter {
   /**
-   * 
+   *
    * constructor
    * @param {String} url
    * @param {String} exchange
@@ -26,7 +25,7 @@ class AmqpService extends EventEmitter
    * url - url for rabbit
    * exchange - name exchange in rabbit
    * serviceName - service name of  created queues for binding in rabbit
-   * 
+   *
    */
   constructor (url, exchange, serviceName) {
     if (!url || !exchange || !serviceName)
@@ -40,7 +39,7 @@ class AmqpService extends EventEmitter
 
   /**
    * function for start (connect to rabbit)
-   * 
+   *
    * @memberOf AmqpServer
    */
   async start () {
@@ -59,17 +58,16 @@ class AmqpService extends EventEmitter
    * function to subscribe to this channel
    * when get msg on this channel
    *  emit msg with type=emitMessage parameter
-   * 
-   * @param {String} routing 
+   *
+   * @param {String} routing
    * @param {String} emitMessage
-   * 
+   *
    * @memberOf AmqpServer
    */
-  async addBind (routing, emitMessage) {
-    await this.channel.assertQueue(`${this.serviceName}.${routing}`, {autoDelete: true});
-    await this.channel.bindQueue(`${this.serviceName}.${routing}`, this.exchange, 
-      `${this.serviceName}.${routing}`);
-    this.channel.consume(`${this.serviceName}.${routing}`, async (data) => {
+  async addBind (queue, routing, emitMessage) {
+    await this.channel.assertQueue(`${this.serviceName}.${queue}`, {autoDelete: true});
+    await this.channel.bindQueue(`${this.serviceName}.${queue}`, this.exchange, `${this.serviceName}.${routing}`);
+    this.channel.consume(`${this.serviceName}.${queue}`, async (data) => {
       if (data.fields.routingKey === `${this.serviceName}.${routing}`)
         this.emit(emitMessage, JSON.parse(data.content), data.fields.routingKey);
       this.channel.ack(data);
@@ -78,16 +76,16 @@ class AmqpService extends EventEmitter
 
 
   /**
-   * 
+   *
    * Function to publish msg
-   * 
-   * @param {String} routing 
-   * @param {String} msg 
-   * 
+   *
+   * @param {String} routing
+   * @param {String} msg
+   *
    * @memberOf AmqpService
    */
   async publishMsg (routing, msg) {
-    return await this.channel.publish(this.exchange, `${this.serviceName}.${routing}`, 
+    return await this.channel.publish(this.exchange, `${this.serviceName}.${routing}`,
       new Buffer(JSON.stringify(msg)));
   }
 
@@ -95,9 +93,9 @@ class AmqpService extends EventEmitter
 
   /**
    * function to unsubscribe from this channel
-   * 
-   * @param {String} routing 
-   * 
+   *
+   * @param {String} routing
+   *
    * @memberOf AmqpServer
    */
   async delBind (routing) {
